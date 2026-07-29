@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(node -c routes/items.js)",
+      "Bash(node -c server.js)",
+      "Bash(node -c models/Item.js)"
+    ]
+  }
+}
