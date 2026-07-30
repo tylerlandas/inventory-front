@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getLocations } from '../services/api';
 
-export default function ConfirmModal({ visible, product, loading, onConfirm, onCancel }) {
+export default function ConfirmModal({ visible, product, loading, manual, onConfirm, onCancel }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -42,6 +42,8 @@ export default function ConfirmModal({ visible, product, loading, onConfirm, onC
         <p className="modal-title">
           {loading
             ? 'Looking Up Item…'
+            : manual
+            ? 'Add Item'
             : product?.found === false
             ? 'Item Not Found — Enter Details'
             : 'Confirm Item'}
@@ -92,7 +94,7 @@ export default function ConfirmModal({ visible, product, loading, onConfirm, onC
               </>
             )}
 
-            {product?.found !== false && (
+            {!manual && product?.found !== false && (
               <p className="field-hint">Edit the details above if anything looks wrong, then tap Confirm.</p>
             )}
           </>

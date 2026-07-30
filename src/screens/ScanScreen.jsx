@@ -7,6 +7,7 @@ import DuplicateModal from '../components/DuplicateModal';
 import { lookupBarcode, getItemsByBarcode, createItem, updateItemCount } from '../services/api';
 import { useItems } from '../context/ItemsContext';
 import { useAlert } from '../context/AlertContext';
+import { fileToResizedDataUrl } from '../utils/image';
 
 const FORMATS = [
   BarcodeFormat.EAN_13,
@@ -29,6 +30,7 @@ export default function ScanScreen() {
   const [permission, setPermission] = useState(null); // null = unknown, true = granted, false = denied
   const [scanning, setScanning] = useState(true);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [manualLoading, setManualLoading] = useState(false);
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [duplicateVisible, setDuplicateVisible] = useState(false);
@@ -45,6 +47,7 @@ export default function ScanScreen() {
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const controlsRef = useRef(null);
+  const manualInputRef = useRef(null);
 
   scanningRef.current = scanning;
 
@@ -73,6 +76,28 @@ export default function ScanScreen() {
       setLookupLoading(false);
     }
   }, []);
+
+  const handleManualPhoto = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+
+      setManualLoading(true);
+      try {
+        const imageUrl = await fileToResizedDataUrl(file);
+        setScannedBarcode(null);
+        setFoundProduct({ name: '', description: '', imageUrl, found: false });
+        setScanning(false);
+        setConfirmVisible(true);
+      } catch {
+        alert('Error', 'Failed to process photo.');
+      } finally {
+        setManualLoading(false);
+      }
+    },
+    [alert]
+  );
 
   const startDecoding = useCallback(
     (onDone) => {
@@ -150,6 +175,12 @@ export default function ScanScreen() {
     async (product) => {
       setConfirmedProduct(product);
       setConfirmVisible(false);
+
+      if (!scannedBarcode) {
+        await saveNewItem(product);
+        return;
+      }
+
       try {
         const existing = await getItemsByBarcode(scannedBarcode);
         if (existing.length > 0) {
@@ -187,6 +218,15 @@ export default function ScanScreen() {
     <div className="scan-screen">
       <video ref={videoRef} className="scan-video" muted playsInline />
 
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        ref={manualInputRef}
+        onChange={handleManualPhoto}
+        style={{ display: 'none' }}
+      />
+
       {showPermissionScreen && (
         <div className="perm-screen" style={{ position: 'absolute', inset: 0 }}>
           <IoCameraOutline />
@@ -196,6 +236,14 @@ export default function ScanScreen() {
           </p>
           <button className="perm-btn" onClick={requestPermission}>
             Allow Camera Access
+          </button>
+          <button
+            className="btn-outline-blue"
+            style={{ marginTop: 14 }}
+            onClick={() => manualInputRef.current?.click()}
+            disabled={manualLoading}
+          >
+            {manualLoading ? 'Processing…' : 'Add Item Without Barcode'}
           </button>
         </div>
       )}
@@ -223,6 +271,17 @@ export default function ScanScreen() {
             <div className="scan-corner br" />
           </div>
 
+          {scanning && !confirmVisible && !duplicateVisible && (
+            <button
+              className="manual-add-btn"
+              onClick={() => manualInputRef.current?.click()}
+              disabled={manualLoading}
+            >
+              <IoCameraOutline size={18} />
+              <span>{manualLoading ? 'Processing…' : 'Add Without Barcode'}</span>
+            </button>
+          )}
+
           {!scanning && !confirmVisible && !duplicateVisible && (
             <button className="scan-again-btn" onClick={resetToScanning}>
               <IoRefreshOutline size={18} />
@@ -236,6 +295,7 @@ export default function ScanScreen() {
         visible={confirmVisible}
         product={foundProduct}
         loading={lookupLoading}
+        manual={!scannedBarcode}
         onConfirm={handleConfirm}
         onCancel={() => {
           setConfirmVisible(false);
