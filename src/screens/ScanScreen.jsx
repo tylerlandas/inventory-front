@@ -4,7 +4,9 @@ import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { IoCameraOutline, IoScanOutline, IoRefreshOutline } from 'react-icons/io5';
 import ConfirmModal from '../components/ConfirmModal';
 import DuplicateModal from '../components/DuplicateModal';
-import { lookupBarcode, getItemsByBarcode, createItem, updateItemCount } from '../services/api';
+import FoundItemModal from '../components/FoundItemModal';
+import RemoveItemModal from '../components/RemoveItemModal';
+import { lookupBarcode, getItemsByBarcode, createItem, updateItemCount, deleteItem } from '../services/api';
 import { useItems } from '../context/ItemsContext';
 import { useAlert } from '../context/AlertContext';
 import { fileToResizedDataUrl } from '../utils/image';
@@ -34,13 +36,15 @@ export default function ScanScreen() {
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [duplicateVisible, setDuplicateVisible] = useState(false);
+  const [foundActionVisible, setFoundActionVisible] = useState(false);
+  const [removePickerVisible, setRemovePickerVisible] = useState(false);
 
   const [scannedBarcode, setScannedBarcode] = useState(null);
   const [foundProduct, setFoundProduct] = useState(null);
   const [confirmedProduct, setConfirmedProduct] = useState(null);
   const [existingItems, setExistingItems] = useState([]);
 
-  const { addItem, updateItem } = useItems();
+  const { addItem, updateItem, removeItem } = useItems();
   const alert = useAlert();
   const lastScanned = useRef(null);
   const scanningRef = useRef(true);
@@ -185,7 +189,7 @@ export default function ScanScreen() {
         const existing = await getItemsByBarcode(scannedBarcode);
         if (existing.length > 0) {
           setExistingItems(existing);
-          setDuplicateVisible(true);
+          setFoundActionVisible(true);
         } else {
           await saveNewItem(product);
         }
@@ -195,6 +199,36 @@ export default function ScanScreen() {
     },
     [scannedBarcode, saveNewItem]
   );
+
+  const handleRemoveItem = useCallback(
+    async (item) => {
+      try {
+        await deleteItem(item._id);
+        removeItem(item._id);
+        setRemovePickerVisible(false);
+        alert('Item Removed', `"${item.name}" has been removed from your inventory.`, [
+          { text: 'OK', onPress: resetToScanning },
+        ]);
+      } catch {
+        alert('Error', 'Failed to remove item.');
+      }
+    },
+    [removeItem, alert, resetToScanning]
+  );
+
+  const handleChooseAdd = useCallback(() => {
+    setFoundActionVisible(false);
+    setDuplicateVisible(true);
+  }, []);
+
+  const handleChooseRemove = useCallback(() => {
+    setFoundActionVisible(false);
+    if (existingItems.length === 1) {
+      handleRemoveItem(existingItems[0]);
+    } else {
+      setRemovePickerVisible(true);
+    }
+  }, [existingItems, handleRemoveItem]);
 
   const handleIncreaseCount = useCallback(
     async (item) => {
@@ -282,12 +316,16 @@ export default function ScanScreen() {
             </button>
           )}
 
-          {!scanning && !confirmVisible && !duplicateVisible && (
-            <button className="scan-again-btn" onClick={resetToScanning}>
-              <IoRefreshOutline size={18} />
-              <span>Scan Again</span>
-            </button>
-          )}
+          {!scanning &&
+            !confirmVisible &&
+            !duplicateVisible &&
+            !foundActionVisible &&
+            !removePickerVisible && (
+              <button className="scan-again-btn" onClick={resetToScanning}>
+                <IoRefreshOutline size={18} />
+                <span>Scan Again</span>
+              </button>
+            )}
         </div>
       )}
 
@@ -299,6 +337,27 @@ export default function ScanScreen() {
         onConfirm={handleConfirm}
         onCancel={() => {
           setConfirmVisible(false);
+          resetToScanning();
+        }}
+      />
+
+      <FoundItemModal
+        visible={foundActionVisible}
+        existingItems={existingItems}
+        onAdd={handleChooseAdd}
+        onRemove={handleChooseRemove}
+        onCancel={() => {
+          setFoundActionVisible(false);
+          resetToScanning();
+        }}
+      />
+
+      <RemoveItemModal
+        visible={removePickerVisible}
+        existingItems={existingItems}
+        onRemove={handleRemoveItem}
+        onCancel={() => {
+          setRemovePickerVisible(false);
           resetToScanning();
         }}
       />
