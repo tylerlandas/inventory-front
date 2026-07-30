@@ -1,8 +1,12 @@
 import React, { useState, Suspense, lazy } from 'react';
-import { IoScanOutline, IoListOutline } from 'react-icons/io5';
+import { IoScanOutline, IoListOutline, IoLogOutOutline } from 'react-icons/io5';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ItemsProvider } from './context/ItemsContext';
 import { AlertProvider } from './context/AlertContext';
 import ListScreen from './screens/ListScreen';
+import LoginScreen from './screens/LoginScreen';
+import CreateAccountScreen from './screens/CreateAccountScreen';
+import ResetPasswordScreen from './screens/ResetPasswordScreen';
 
 const ScanScreen = lazy(() => import('./screens/ScanScreen'));
 
@@ -11,15 +15,21 @@ const TABS = [
   { key: 'list', label: 'List Mode', title: 'My Inventory', icon: IoListOutline },
 ];
 
-export default function App() {
+function MainApp() {
   const [tab, setTab] = useState('scan');
+  const { logout } = useAuth();
   const current = TABS.find((t) => t.key === tab);
 
   return (
     <ItemsProvider>
       <AlertProvider>
         <div className="app">
-          <div className="app-header">{current.title}</div>
+          <div className="app-header">
+            <span>{current.title}</span>
+            <button className="logout-btn" onClick={logout} aria-label="Log out">
+              <IoLogOutOutline size={20} />
+            </button>
+          </div>
           <div className="app-content">
             {tab === 'scan' && (
               <Suspense fallback={<div className="scan-screen" />}>
@@ -43,5 +53,30 @@ export default function App() {
         </div>
       </AlertProvider>
     </ItemsProvider>
+  );
+}
+
+function AuthGate() {
+  const { user, checkingSession } = useAuth();
+  const [authScreen, setAuthScreen] = useState('login');
+
+  if (checkingSession) {
+    return <div className="auth-screen" />;
+  }
+
+  if (!user) {
+    if (authScreen === 'create') return <CreateAccountScreen onNavigate={setAuthScreen} />;
+    if (authScreen === 'reset') return <ResetPasswordScreen onNavigate={setAuthScreen} />;
+    return <LoginScreen onNavigate={setAuthScreen} />;
+  }
+
+  return <MainApp />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   );
 }
