@@ -6,7 +6,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import DuplicateModal from '../components/DuplicateModal';
 import FoundItemModal from '../components/FoundItemModal';
 import RemoveItemModal from '../components/RemoveItemModal';
-import { lookupBarcode, getItemsByBarcode, createItem, updateItemCount, deleteItem } from '../services/api';
+import { lookupBarcode, getItemsByBarcode, createItem, updateItemCount } from '../services/api';
 import { useItems } from '../context/ItemsContext';
 import { useAlert } from '../context/AlertContext';
 import { fileToResizedDataUrl } from '../utils/image';
@@ -44,7 +44,7 @@ export default function ScanScreen() {
   const [confirmedProduct, setConfirmedProduct] = useState(null);
   const [existingItems, setExistingItems] = useState([]);
 
-  const { addItem, updateItem, removeItem } = useItems();
+  const { addItem, updateItem } = useItems();
   const alert = useAlert();
   const lastScanned = useRef(null);
   const scanningRef = useRef(true);
@@ -202,18 +202,19 @@ export default function ScanScreen() {
 
   const handleRemoveItem = useCallback(
     async (item) => {
+      if (item.count <= 0) return;
       try {
-        await deleteItem(item._id);
-        removeItem(item._id);
+        const updated = await updateItemCount(item._id, -1);
+        updateItem(updated);
         setRemovePickerVisible(false);
-        alert('Item Removed', `"${item.name}" has been removed from your inventory.`, [
+        alert('Count Updated', `"${item.name}" is now at ${updated.count}.`, [
           { text: 'OK', onPress: resetToScanning },
         ]);
       } catch {
-        alert('Error', 'Failed to remove item.');
+        alert('Error', 'Failed to update count.');
       }
     },
-    [removeItem, alert, resetToScanning]
+    [updateItem, alert, resetToScanning]
   );
 
   const handleChooseAdd = useCallback(() => {

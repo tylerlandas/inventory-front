@@ -32,7 +32,7 @@ export default function FoundItemModal({ visible, existingItems, onAdd, onRemove
           Add Item
         </button>
         <button className="btn-outline-red" style={{ width: '100%', marginBottom: 10 }} onClick={onRemove}>
-          Remove Item
+          Remove One
         </button>
 
         <button className="cancel-link-btn" onClick={onCancel}>
