@@ -312,6 +312,41 @@ textarea {
   opacity: 0.6;
 }
 
+.capture-actions {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.capture-cancel-btn {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--gray-900);
+  padding: 13px 22px;
+  border-radius: 28px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+}
+
+.capture-shutter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--blue);
+  color: #fff;
+  padding: 13px 22px;
+  border-radius: 28px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+}
+
 .perm-screen {
   height: 100%;
   background: var(--gray-50);

@@ -1,3 +1,18 @@
+export function videoFrameToResizedDataUrl(video, { maxDim = 1200, quality = 0.82 } = {}) {
+  let width = video.videoWidth;
+  let height = video.videoHeight;
+  if (width > maxDim || height > maxDim) {
+    const scale = maxDim / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
 export function fileToResizedDataUrl(file, { maxDim = 1200, quality = 0.82 } = {}) {
   return new Promise((resolve, reject) => {
     const img = new Image();

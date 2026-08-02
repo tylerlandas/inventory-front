@@ -9,7 +9,7 @@ import RemoveItemModal from '../components/RemoveItemModal';
 import { lookupBarcode, getItemsByBarcode, createItem, updateItemCount } from '../services/api';
 import { useItems } from '../context/ItemsContext';
 import { useAlert } from '../context/AlertContext';
-import { fileToResizedDataUrl } from '../utils/image';
+import { fileToResizedDataUrl, videoFrameToResizedDataUrl } from '../utils/image';
 
 const FORMATS = [
   BarcodeFormat.EAN_13,
@@ -33,6 +33,7 @@ export default function ScanScreen() {
   const [scanning, setScanning] = useState(true);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [manualLoading, setManualLoading] = useState(false);
+  const [photoCaptureVisible, setPhotoCaptureVisible] = useState(false);
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [duplicateVisible, setDuplicateVisible] = useState(false);
@@ -48,6 +49,7 @@ export default function ScanScreen() {
   const alert = useAlert();
   const lastScanned = useRef(null);
   const scanningRef = useRef(true);
+  const photoCaptureRef = useRef(false);
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const controlsRef = useRef(null);
@@ -55,6 +57,7 @@ export default function ScanScreen() {
   const uploadInputRef = useRef(null);
 
   scanningRef.current = scanning;
+  photoCaptureRef.current = photoCaptureVisible;
 
   const resetToScanning = useCallback(() => {
     setScanning(true);
@@ -65,7 +68,7 @@ export default function ScanScreen() {
   }, []);
 
   const handleBarcodeScanned = useCallback(async (data) => {
-    if (!scanningRef.current || data === lastScanned.current) return;
+    if (!scanningRef.current || photoCaptureRef.current || data === lastScanned.current) return;
     lastScanned.current = data;
     setScanning(false);
     setScannedBarcode(data);
@@ -104,13 +107,39 @@ export default function ScanScreen() {
     [alert]
   );
 
+  const handleCapturePhoto = useCallback(() => {
+    if (!videoRef.current || !videoRef.current.videoWidth) {
+      alert('Error', 'Camera is not ready yet. Please try again in a moment.');
+      return;
+    }
+    try {
+      const imageUrl = videoFrameToResizedDataUrl(videoRef.current);
+      setPhotoCaptureVisible(false);
+      setScannedBarcode(null);
+      setFoundProduct({ name: '', description: '', imageUrl, found: false });
+      setScanning(false);
+      setConfirmVisible(true);
+    } catch {
+      alert('Error', 'Failed to capture photo.');
+    }
+  }, [alert]);
+
   const openManualAdd = useCallback(() => {
     alert('Add Item', 'Would you like to take a photo or upload a file?', [
-      { text: 'Take Photo', onPress: () => cameraInputRef.current?.click() },
+      {
+        text: 'Take Photo',
+        onPress: () => {
+          if (permission === true) {
+            setPhotoCaptureVisible(true);
+          } else {
+            cameraInputRef.current?.click();
+          }
+        },
+      },
       { text: 'Upload File', onPress: () => uploadInputRef.current?.click() },
       { text: 'Cancel', style: 'cancel' },
     ]);
-  }, [alert]);
+  }, [alert, permission]);
 
   const startDecoding = useCallback(
     (onDone) => {
@@ -299,7 +328,28 @@ export default function ScanScreen() {
         </div>
       )}
 
-      {!showPermissionScreen && (
+      {!showPermissionScreen && photoCaptureVisible && (
+        <div className="scan-overlay">
+          <div className="scan-badge-wrap">
+            <div className="scan-badge">
+              <IoCameraOutline size={16} />
+              <span>Line up your photo</span>
+            </div>
+          </div>
+
+          <div className="capture-actions">
+            <button className="capture-cancel-btn" onClick={() => setPhotoCaptureVisible(false)}>
+              Cancel
+            </button>
+            <button className="capture-shutter-btn" onClick={handleCapturePhoto}>
+              <IoCameraOutline size={18} />
+              <span>Capture</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showPermissionScreen && !photoCaptureVisible && (
         <div className="scan-overlay">
           <div className="scan-badge-wrap">
             {lookupLoading ? (

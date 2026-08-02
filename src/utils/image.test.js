@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fileToResizedDataUrl } from './image';
+import { fileToResizedDataUrl, videoFrameToResizedDataUrl } from './image';
 
 let mockDims = { width: 800, height: 600 };
 let mockShouldError = false;
@@ -98,5 +98,43 @@ describe('fileToResizedDataUrl', () => {
   it('rejects when the image fails to load', async () => {
     mockShouldError = true;
     await expect(fileToResizedDataUrl(makeFile())).rejects.toThrow('Failed to load image');
+  });
+});
+
+describe('videoFrameToResizedDataUrl', () => {
+  function makeVideo(videoWidth, videoHeight) {
+    return { videoWidth, videoHeight };
+  }
+
+  it('resolves synchronously with the canvas-generated data URL', () => {
+    const result = videoFrameToResizedDataUrl(makeVideo(800, 600));
+    expect(result).toBe('data:image/jpeg;base64,mock');
+  });
+
+  it('leaves dimensions unchanged when already within maxDim', () => {
+    const drawImage = vi.fn();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage }));
+
+    videoFrameToResizedDataUrl(makeVideo(800, 600), { maxDim: 1200 });
+
+    expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 800, 600);
+  });
+
+  it('scales down a video frame larger than maxDim while preserving aspect ratio', () => {
+    const drawImage = vi.fn();
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage }));
+
+    videoFrameToResizedDataUrl(makeVideo(3000, 1500), { maxDim: 1200 });
+
+    expect(drawImage).toHaveBeenCalledWith(expect.anything(), 0, 0, 1200, 600);
+  });
+
+  it('passes the quality option through to the JPEG export', () => {
+    const toDataURL = vi.fn(() => 'data:image/jpeg;base64,mock');
+    HTMLCanvasElement.prototype.toDataURL = toDataURL;
+
+    videoFrameToResizedDataUrl(makeVideo(800, 600), { quality: 0.5 });
+
+    expect(toDataURL).toHaveBeenCalledWith('image/jpeg', 0.5);
   });
 });
