@@ -51,7 +51,8 @@ export default function ScanScreen() {
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const controlsRef = useRef(null);
-  const manualInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const uploadInputRef = useRef(null);
 
   scanningRef.current = scanning;
 
@@ -102,6 +103,14 @@ export default function ScanScreen() {
     },
     [alert]
   );
+
+  const openManualAdd = useCallback(() => {
+    alert('Add Item', 'Would you like to take a photo or upload a file?', [
+      { text: 'Take Photo', onPress: () => cameraInputRef.current?.click() },
+      { text: 'Upload File', onPress: () => uploadInputRef.current?.click() },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }, [alert]);
 
   const startDecoding = useCallback(
     (onDone) => {
@@ -257,7 +266,14 @@ export default function ScanScreen() {
         type="file"
         accept="image/*"
         capture="environment"
-        ref={manualInputRef}
+        ref={cameraInputRef}
+        onChange={handleManualPhoto}
+        style={{ display: 'none' }}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={uploadInputRef}
         onChange={handleManualPhoto}
         style={{ display: 'none' }}
       />
@@ -275,7 +291,7 @@ export default function ScanScreen() {
           <button
             className="btn-outline-blue"
             style={{ marginTop: 14 }}
-            onClick={() => manualInputRef.current?.click()}
+            onClick={openManualAdd}
             disabled={manualLoading}
           >
             {manualLoading ? 'Processing…' : 'Add Item Without Barcode'}
@@ -309,7 +325,7 @@ export default function ScanScreen() {
           {scanning && !confirmVisible && !duplicateVisible && (
             <button
               className="manual-add-btn"
-              onClick={() => manualInputRef.current?.click()}
+              onClick={openManualAdd}
               disabled={manualLoading}
             >
               <IoCameraOutline size={18} />
