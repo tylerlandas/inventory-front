@@ -3,8 +3,8 @@ import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen({ onNavigate }) {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('testing321');
+  const [password, setPassword] = useState('Badpuppy1!4321');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
